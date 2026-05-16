@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "exported_at": "2026-05-16T16:25:16.810211Z",
+    "source": "BLING_Adversarial_Sandbox",
+    "status": "REQUIRES_HUMAN_VALIDATION",
+    "topology_type": "layering_chain",
+    "mutation_generation": 0,
+    "simulation_id": "run_45b85af322"
+  },
+  "pattern_data": {
+    "evaluation_id": "eval_afdc00929e7b",
+    "transaction_id": "txn_a814c9078a644e",
+    "simulation_id": "run_45b85af322",
+    "topology_type": "layering_chain",
+    "mutation_generation": 0,
+    "sender_account": "acc_65d68c3474",
+    "receiver_account": "acc_79abc85858",
+    "amount": 39617.45,
+    "combined_risk_score": 0.181,
+    "rule_heuristic_score": 0.18,
+    "graph_heuristic_score": 0.0,
+    "baseline_topology_score": 0.472,
+    "evades_heuristics": true,
+    "triggered_rules": [
+      {
+        "rule": "known_attack_pattern",
+        "risk": 0.6
+      }
+    ],
+    "graph_signals": [],
+    "evaluation_latency_ms": 132.14,
+    "timestamp": "2026-05-16T16:24:00.037294Z",
+    "_simulation": true
+  }
+}

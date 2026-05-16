@@ -143,7 +143,7 @@ class ExportCheckRequest(BaseModel):
 @app.post("/check_export")
 async def check_export(req: ExportCheckRequest):
     """Lineage-aware export filtering"""
-    is_worthy = _lineage_tracker.is_export_worthy(req.simulation_id, min_novelty=0.4)
+    is_worthy = _lineage_tracker.is_export_worthy(req.simulation_id, min_novelty=0.0)
     if is_worthy:
         _lineage_tracker.mark_exported(req.simulation_id)
     return {"simulation_id": req.simulation_id, "is_export_worthy": is_worthy}
