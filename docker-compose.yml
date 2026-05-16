@@ -1,0 +1,350 @@
+version: "3.9"
+
+networks:
+  redteam-net:
+    driver: bridge
+    name: bling_redteam_network
+
+volumes:
+  postgres_data:
+  redis_data:
+  kafka_data:
+
+services:
+  # ─────────────────────────────────────────────
+  # INFRASTRUCTURE
+  # ─────────────────────────────────────────────
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: bling_zookeeper
+    networks: [redteam-net]
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo ruok | nc localhost 2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: bling_kafka
+    networks: [redteam-net]
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 24
+      KAFKA_LOG_SEGMENT_BYTES: 10485760
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: bling_kafka_ui
+    networks: [redteam-net]
+    ports:
+      - "8080:8080"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_CLUSTERS_0_NAME: bling-sandbox
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+      DYNAMIC_CONFIG_ENABLED: "true"
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: bling_redis
+    networks: [redteam-net]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: bling_postgres
+    networks: [redteam-net]
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: bling_redteam
+      POSTGRES_USER: redteam
+      POSTGRES_PASSWORD: redteam_secure_2026
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U redteam -d bling_redteam"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────
+  # TOPIC INITIALIZER (runs once and exits)
+  # ─────────────────────────────────────────────
+
+  kafka-init:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: bling_kafka_init
+    networks: [redteam-net]
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c"]
+    command: |
+      "
+      echo 'Waiting for Kafka to be ready...'
+      sleep 5
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic transactions.sandbox --partitions 4 --replication-factor 1
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic graph.updates.sandbox --partitions 2 --replication-factor 1
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic fraud.alerts.sandbox --partitions 2 --replication-factor 1
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic redteam.metrics --partitions 2 --replication-factor 1
+      echo 'Kafka topics created successfully.'
+      kafka-topics --bootstrap-server kafka:9092 --list
+      "
+    restart: "no"
+
+  # ─────────────────────────────────────────────
+  # BLING ADVERSARIAL PIPELINE SERVICES
+  # ─────────────────────────────────────────────
+
+  topology-generator:
+    build:
+      context: ./redteam
+      dockerfile: topology_generator/Dockerfile
+    container_name: bling_topology_generator
+    networks: [redteam-net]
+    ports:
+      - "8001:8001"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      - SERVICE_NAME=topology-generator
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  topology-graph-engine:
+    build:
+      context: ./redteam
+      dockerfile: graph_engine/Dockerfile
+    container_name: bling_topology_graph_engine
+    networks: [redteam-net]
+    ports:
+      - "8002:8002"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      - SERVICE_NAME=topology-graph-engine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  evaluation-harness:
+    build:
+      context: ./redteam
+      dockerfile: evaluation_harness/Dockerfile
+    container_name: bling_evaluation_harness
+    networks: [redteam-net]
+    ports:
+      - "8003:8003"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      topology-graph-engine:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      - SERVICE_NAME=evaluation-harness
+      - GRAPH_ENGINE_URL=http://topology-graph-engine:8002
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  topology-mutator:
+    build:
+      context: ./redteam
+      dockerfile: topology_mutator/Dockerfile
+    container_name: bling_topology_mutator
+    networks: [redteam-net]
+    ports:
+      - "8004:8004"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      - SERVICE_NAME=topology-mutator
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  escape-analyzer:
+    build:
+      context: ./redteam
+      dockerfile: escape_analyzer/Dockerfile
+    container_name: bling_escape_analyzer
+    networks: [redteam-net]
+    ports:
+      - "8005:8005"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      - SERVICE_NAME=escape-analyzer
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  topology-diversity:
+    build:
+      context: ./redteam
+      dockerfile: topology_diversity/Dockerfile
+    container_name: bling_topology_diversity
+    networks: [redteam-net]
+    ports:
+      - "8082:8082"
+    env_file: .env
+    environment:
+      - SERVICE_NAME=topology-diversity
+    volumes:
+      - ./evidence:/app/evidence
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  robustness-orchestrator:
+    build:
+      context: ./redteam/orchestrator
+      dockerfile: Dockerfile
+    container_name: bling_robustness_orchestrator
+    networks: [redteam-net]
+    depends_on:
+      topology-generator:
+        condition: service_healthy
+      topology-graph-engine:
+        condition: service_healthy
+      evaluation-harness:
+        condition: service_healthy
+      topology-mutator:
+        condition: service_healthy
+      escape-analyzer:
+        condition: service_healthy
+      topology-diversity:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      - SERVICE_NAME=robustness-orchestrator
+      - GENERATOR_URL=http://topology-generator:8001
+      - GRAPH_ENGINE_URL=http://topology-graph-engine:8002
+      - DETECTOR_URL=http://evaluation-harness:8003
+      - MUTATOR_URL=http://topology-mutator:8004
+      - METRICS_URL=http://escape-analyzer:8005
+      - DIVERSITY_URL=http://topology-diversity:8082
+    restart: unless-stopped
+
+  sandbox-control-api:
+    build:
+      context: ./redteam
+      dockerfile: control_api/Dockerfile
+    container_name: bling_sandbox_control_api
+    networks: [redteam-net]
+    ports:
+      - "8081:8080"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      - SERVICE_NAME=sandbox-control-api
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - GENERATOR_URL=http://topology-generator:8001
+      - MUTATOR_URL=http://topology-mutator:8004
+      - EVIDENCE_DIR=/app/evidence
+    volumes:
+      - ./evidence:/app/evidence
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 20s
+
+  bling-dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: bling_dashboard
+    networks: [redteam-net]
+    ports:
+      - "3000:3000"
+    depends_on:
+      sandbox-control-api:
+        condition: service_healthy
+    restart: unless-stopped

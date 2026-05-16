@@ -1,0 +1,73 @@
+{
+  "attack_profiles": {
+    "layering_chain": {
+      "description": "Sequential A→B→C→D fund movement to obscure origin",
+      "min_depth": 3,
+      "max_depth": 10,
+      "amount_range": [5000, 50000],
+      "time_spread_seconds": 3600,
+      "detection_difficulty": "medium"
+    },
+    "round_trip": {
+      "description": "Cyclic fund flow that returns to origin A→B→C→A",
+      "min_nodes": 3,
+      "max_nodes": 8,
+      "amount_range": [10000, 100000],
+      "time_spread_seconds": 7200,
+      "detection_difficulty": "high"
+    },
+    "mule_network": {
+      "description": "Hub account disperses to many mule accounts",
+      "hub_count": 2,
+      "mule_count_range": [5, 20],
+      "amount_range": [1000, 15000],
+      "time_spread_seconds": 1800,
+      "detection_difficulty": "medium"
+    },
+    "structuring": {
+      "description": "Breaking large amounts into sub-threshold chunks",
+      "threshold": 10000,
+      "chunk_range": [2000, 9500],
+      "repeat_count_range": [5, 20],
+      "time_spread_seconds": 86400,
+      "detection_difficulty": "low"
+    },
+    "dormant_activation": {
+      "description": "Previously dormant account suddenly becomes active",
+      "dormancy_days_range": [90, 730],
+      "burst_transactions": [3, 15],
+      "amount_range": [500, 25000],
+      "time_spread_seconds": 3600,
+      "detection_difficulty": "medium"
+    },
+    "velocity_attack": {
+      "description": "Rapid-fire transactions in short timespan",
+      "transaction_count_range": [10, 50],
+      "time_window_seconds": 300,
+      "amount_range": [100, 5000],
+      "detection_difficulty": "low"
+    },
+    "fan_in_fan_out": {
+      "description": "Aggregate from many sources then disperse to many targets",
+      "source_count_range": [3, 10],
+      "sink_count_range": [3, 10],
+      "aggregator_count": 1,
+      "amount_range": [2000, 20000],
+      "time_spread_seconds": 3600,
+      "detection_difficulty": "high"
+    }
+  },
+  "transaction_types": [
+    "wire_transfer", "ach_transfer", "internal_transfer",
+    "bill_payment", "atm_withdrawal", "debit_purchase",
+    "crypto_exchange", "p2p_transfer", "pos_transaction"
+  ],
+  "geo_locations": [
+    "37.5665,126.9780", "40.7128,-74.0060", "51.5074,-0.1278",
+    "48.8566,2.3522", "35.6762,139.6503", "1.3521,103.8198",
+    "-33.8688,151.2093", "55.7558,37.6176", "25.2048,55.2708",
+    "19.0760,72.8777"
+  ],
+  "device_prefixes": ["mob", "web", "atm", "pos", "api"],
+  "ip_ranges": ["10.0", "172.16", "192.168", "203.0", "45.33"]
+}
