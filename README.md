@@ -55,26 +55,46 @@ Synthetic perturbation testing against static baseline heuristics:
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│            BLING Adversarial Sandbox Pipeline            │
-│                                                          │
-│  Fraud Pattern Generator  (7 topology types)             │
-│           ↓                                              │
-│  Topology Mutator          (7 perturbation strategies)   │
-│           ↓                                              │
-│  Kafka Sandbox Stream      (transactions.sandbox)        │
-│           ↓                                              │
-│  Graph Engine              (NetworkX live graph)         │
-│           ↓                                              │
-│  Topology Evaluation       (Fixed benchmark harness —    │
-│  Harness                    trains once, never retrains) │
-│           ↓                                              │
-│  Escape Analyzer           (Tracks evasion outcomes)     │
-│           ↓                                              │
-│  Graph Pattern Exporter    (Exports topology variations  │
-│                             for human review)            │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│             BLING Adversarial Sandbox Pipeline              │
+│                                                             │
+│  [Robustness Orchestrator] ← (Automates the entire cycle)   │
+│           │                                                 │
+│           ├─► Topology Generator (7 fraud patterns)         │
+│           │                                                 │
+│           ├─► Topology Diversity (Measures structural       │
+│           │                       novelty & fingerprint)    │
+│           │                                                 │
+│           ├─► Kafka Stream (Live transaction feed)          │
+│           │                                                 │
+│           ├─► Graph Engine (Live NetworkX topology)         │
+│           │                                                 │
+│           ├─► Evaluation Harness (Detection heuristics)     │
+│           │                                                 │
+│           ├─► Escape Analyzer (Evasion metrics)             │
+│           │                                                 │
+│           ├─► Topology Mutator (Deterministic perturbations)│
+│           │                                                 │
+│           └─► Control API (Dashboard WebSockets & Registry) │
+└─────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## The Robustness Orchestrator
+
+The **Robustness Orchestrator** is the "brain" of the BLING framework. It automates the adversarial training loop, so researchers do not need to trigger attacks manually. 
+
+**The Orchestrator Loop (Cycle):**
+1. **Generate**: Signals the *Topology Generator* to create a synthetic fraud pattern.
+2. **Evaluate Novelty**: Passes the graph to the *Topology Diversity* service to compute a structural fingerprint and novelty score.
+3. **Execute**: Streams the graph's transactions through the *Kafka* sandbox.
+4. **Detect**: The *Evaluation Harness* (Blue Team heuristic) attempts to detect the fraud.
+5. **Analyze**: Queries the *Escape Analyzer* to calculate the evasion rate.
+6. **Register Evidence**: Logs the structural fingerprint, full payload, and lineage to the immutable `evidence/runs/` registry on disk.
+7. **Mutate**: 
+    - If the graph was **detected** (detection rate >= 50%), it commands the *Topology Mutator* to create a more sophisticated variation and loops back to step 1.
+    - If the graph **evaded** detection, it stops mutating, logs a successful evasion, and moves to the next topology family.
 
 ---
 
@@ -125,13 +145,13 @@ docker compose up --build
 ### Watch the Cycle
 ```bash
 # Robustness testing orchestrator
-docker logs -f bling_simulation_runner
+docker logs -f bling_robustness_orchestrator
 
 # Topology generation
-docker logs -f bling_generator
+docker logs -f bling_topology_generator
 
 # Evaluation harness (evasion/detection outcomes)
-docker logs -f bling_detector
+docker logs -f bling_evaluation_harness
 ```
 
 ---
@@ -140,12 +160,14 @@ docker logs -f bling_detector
 
 | Service | Port | Role |
 |---|---|---|
-| **Kafka UI** | `:8080` | Monitor all sandbox topic streams |
+| **Dashboard** | `:3000` | Real-time React frontend |
+| **Control API** | `:8081/docs` | WebSocket hub & Sandbox controls |
 | **Generator** | `:8001/docs` | Topology generation API |
 | **Graph Engine** | `:8002/docs` | NetworkX graph query API |
-| **Topology Eval Harness** | `:8003/docs` | Evaluation results & evasion stats |
+| **Eval Harness** | `:8003/docs` | Evaluation results & evasion stats |
 | **Mutator** | `:8004/docs` | Perturbation strategy API |
-| **Escape Analyzer** | `:8005/docs` | Evasion analysis & pattern export |
+| **Escape Analyzer**| `:8005/docs` | Evasion analysis & pattern export |
+| **Diversity** | `:8082/docs` | Structural fingerprinting & lineage |
 
 ---
 
@@ -209,12 +231,14 @@ docker compose down -v
 redteam/
 ├── configs/             Shared Kafka config, settings, topology profiles
 ├── streaming/           Kafka producer + consumer base classes
-├── generator/           7 topology pattern generators + FastAPI service
+├── topology_generator/  7 topology pattern generators + FastAPI service
+├── topology_diversity/  Structural morphology, similarity scoring, and lineage tracking
 ├── graph_engine/        NetworkX live graph + structural query APIs
-├── detector/            Topology Evaluation Harness (fixed benchmark)
-├── mutator/             7 perturbation strategies + evolution tracker
-├── metrics/             Escape Analyzer + Graph Pattern Exporter
-└── simulation_runner/   Robustness testing cycle orchestrator
+├── evaluation_harness/  Topology Evaluation Harness (fixed benchmark)
+├── topology_mutator/    7 perturbation strategies + evolution tracker
+├── escape_analyzer/     Escape Analyzer + Graph Pattern Exporter
+├── orchestrator/        Robustness testing cycle orchestrator
+└── control_api/         WebSocket dashboard gateway & run registry
 ```
 
 ---
