@@ -1,0 +1,8 @@
+{
+  "transactions_count": 24,
+  "detection_rate": 0.0,
+  "novelty_score": 0.052226105135779965,
+  "structural_divergence": 0.052226105135779965,
+  "topology_family": "multi_stage_funnel",
+  "branch_id": "branch_264aab62"
+}

@@ -1,0 +1,8 @@
+{
+  "transactions_count": 10,
+  "detection_rate": 0.0,
+  "novelty_score": 0.09578831181607028,
+  "structural_divergence": 0.09578831181607028,
+  "topology_family": "distributed_laundering_mesh",
+  "branch_id": "branch_196a72a7"
+}

@@ -1,0 +1,8 @@
+{
+  "transactions_count": 18,
+  "detection_rate": 0.0,
+  "novelty_score": 1.0,
+  "structural_divergence": 1.0,
+  "topology_family": "hierarchical_layering_chain",
+  "branch_id": "branch_2f576f3d"
+}

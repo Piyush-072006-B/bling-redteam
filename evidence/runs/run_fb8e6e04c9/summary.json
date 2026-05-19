@@ -1,0 +1,8 @@
+{
+  "transactions_count": 6,
+  "detection_rate": 0.0,
+  "novelty_score": 0.0,
+  "structural_divergence": 0.0,
+  "topology_family": "multi_hub_dispersal_network",
+  "branch_id": "branch_2b485dd4"
+}

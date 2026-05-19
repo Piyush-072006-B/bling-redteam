@@ -1,0 +1,46 @@
+{
+  "num_nodes": 12,
+  "num_edges": 20,
+  "density": 0.15151515151515152,
+  "in_degree_hist": [
+    1,
+    10,
+    0,
+    0,
+    1
+  ],
+  "out_degree_hist": [
+    1,
+    10,
+    0,
+    0,
+    1
+  ],
+  "hub_count": 2,
+  "triad_census": {
+    "003": 120,
+    "012": 0,
+    "102": 0,
+    "021D": 45,
+    "021U": 45,
+    "021C": 10,
+    "111D": 0,
+    "111U": 0,
+    "030T": 0,
+    "030C": 0,
+    "201": 0,
+    "120D": 0,
+    "120U": 0,
+    "120C": 0,
+    "210": 0,
+    "300": 0
+  },
+  "cycle_signature": {
+    "total_cycles": 0,
+    "avg_length": 0.0,
+    "max_length": 0
+  },
+  "num_components": 1,
+  "max_component_size": 12,
+  "spectral_variance": 0.0
+}
