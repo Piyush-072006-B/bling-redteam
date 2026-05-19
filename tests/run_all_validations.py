@@ -3,14 +3,15 @@ import sys
 import subprocess
 
 def create_evidence_dirs():
+    workspace_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     dirs = [
-        r'D:\bling-redteam\evidence',
-        r'D:\bling-redteam\evidence\graph_snapshots',
-        r'D:\bling-redteam\evidence\topology_diffs',
-        r'D:\bling-redteam\evidence\evasion_exports',
-        r'D:\bling-redteam\evidence\kafka_logs',
-        r'D:\bling-redteam\evidence\replay_runs',
-        r'D:\bling-redteam\evidence\demo_runs'
+        os.path.join(workspace_root, 'evidence'),
+        os.path.join(workspace_root, 'evidence', 'graph_snapshots'),
+        os.path.join(workspace_root, 'evidence', 'topology_diffs'),
+        os.path.join(workspace_root, 'evidence', 'evasion_exports'),
+        os.path.join(workspace_root, 'evidence', 'kafka_logs'),
+        os.path.join(workspace_root, 'evidence', 'replay_runs'),
+        os.path.join(workspace_root, 'evidence', 'demo_runs')
     ]
     for d in dirs:
         os.makedirs(d, exist_ok=True)
@@ -35,9 +36,10 @@ def main():
         )
         
         print("\n" + "=" * 60)
+        workspace_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         if result.returncode == 0:
             print("SUCCESS: All validation tests passed.")
-            print("Evidence has been captured in D:\\bling-redteam\\evidence")
+            print(f"Evidence has been captured in {os.path.join(workspace_root, 'evidence')}")
         else:
             print("FAILED: Some validation tests failed. Check the logs above.")
             

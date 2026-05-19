@@ -60,8 +60,10 @@ def test_deterministic_mutation():
     assert hash_a == hash_b, "Mutations are not deterministic! Hashes do not match."
     
     # Save replay evidence
-    os.makedirs(r"D:\bling-redteam\evidence\replay_runs", exist_ok=True)
-    with open(r"D:\bling-redteam\evidence\replay_runs\replay_hash.txt", "w") as f:
+    workspace_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    replay_dir = os.path.join(workspace_root, "evidence", "replay_runs")
+    os.makedirs(replay_dir, exist_ok=True)
+    with open(os.path.join(replay_dir, "replay_hash.txt"), "w") as f:
         f.write(f"Hash A: {hash_a}\nHash B: {hash_b}\nDeterministic Match: {hash_a == hash_b}")
         
     print(f"Deterministic replay verified. Hash: {hash_a}")

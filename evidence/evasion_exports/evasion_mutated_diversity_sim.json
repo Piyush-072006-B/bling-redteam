@@ -1,0 +1,58 @@
+[
+  {
+    "from_account": "ACC_HUB_9000",
+    "to_account": "ACC_MULE_5001",
+    "amount": 11486,
+    "payment_rail": "NEFT",
+    "timestamp": "2026-05-19T14:47:14"
+  },
+  {
+    "from_account": "ACC_HUB_9000",
+    "to_account": "ACC_MULE_5002",
+    "amount": 9334,
+    "payment_rail": "NEFT",
+    "timestamp": "2026-05-19T16:47:14"
+  },
+  {
+    "from_account": "ACC_HUB_9000",
+    "to_account": "ACC_MULE_5003",
+    "amount": 10603,
+    "payment_rail": "NEFT",
+    "timestamp": "2026-05-19T18:47:14"
+  },
+  {
+    "from_account": "ACC_HUB_9000",
+    "to_account": "ACC_MULE_5004",
+    "amount": 11224,
+    "payment_rail": "NEFT",
+    "timestamp": "2026-05-19T20:47:14"
+  },
+  {
+    "from_account": "ACC_MULE_5002",
+    "to_account": "ACC_RCV_6002",
+    "amount": 8314,
+    "payment_rail": "RTGS",
+    "timestamp": "2026-05-19T23:47:14"
+  },
+  {
+    "from_account": "ACC_MULE_5001",
+    "to_account": "ACC_RCV_6002",
+    "amount": 10835,
+    "payment_rail": "RTGS",
+    "timestamp": "2026-05-20T02:47:14"
+  },
+  {
+    "from_account": "ACC_MULE_5003",
+    "to_account": "ACC_RCV_6002",
+    "amount": 9651,
+    "payment_rail": "RTGS",
+    "timestamp": "2026-05-20T04:47:14"
+  },
+  {
+    "from_account": "ACC_MULE_5004",
+    "to_account": "ACC_RCV_6002",
+    "amount": 10301,
+    "payment_rail": "RTGS",
+    "timestamp": "2026-05-20T07:47:14"
+  }
+]

@@ -1,11 +1,20 @@
 import os
+import sys
 import json
 import urllib.request
 from datetime import datetime
 
+# Resolve sys.path for redteam import
+current_dir = os.path.dirname(os.path.abspath(__file__))
+workspace_root = os.path.dirname(current_dir)
+if workspace_root not in sys.path:
+    sys.path.insert(0, workspace_root)
+
+from redteam.canonical_exporter import export_pattern
+
 # Configuration
 ESCAPE_ANALYZER_URL = "http://localhost:8005"
-EXPORT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "evidence", "evasion_exports")
+EXPORT_DIR = os.path.join(workspace_root, "evidence", "evasion_exports")
 
 def fetch_and_save_evasions():
     print(f"[*] Fetching latest successful evasions from Escape Analyzer API...")
@@ -27,9 +36,6 @@ def fetch_and_save_evasions():
 
     print(f"[*] Found {len(variations)} novel evasive patterns. Saving to {EXPORT_DIR}...")
     
-    # Ensure export directory exists
-    os.makedirs(EXPORT_DIR, exist_ok=True)
-    
     saved_count = 0
     for pattern in variations:
         sim_id = pattern.get("simulation_id", "unknown")
@@ -37,26 +43,16 @@ def fetch_and_save_evasions():
         generation = pattern.get("mutation_generation", 0)
         
         filename = f"evasion_{topo_type}_gen{generation}_{sim_id}.json"
-        filepath = os.path.join(EXPORT_DIR, filename)
+        payload = pattern.get("topology_payload", {})
         
-        # Add metadata for the Blue Team
-        export_payload = {
-            "meta": {
-                "exported_at": datetime.utcnow().isoformat() + "Z",
-                "source": "BLING_Adversarial_Sandbox",
-                "status": "REQUIRES_HUMAN_VALIDATION",
-                "topology_type": topo_type,
-                "mutation_generation": generation,
-                "simulation_id": sim_id
-            },
-            "pattern_data": pattern.get("topology_payload", {})
-        }
-        
-        with open(filepath, "w") as f:
-            json.dump(export_payload, f, indent=2)
-        saved_count += 1
+        try:
+            export_pattern(payload, filename)
+            saved_count += 1
+        except Exception as e:
+            print(f"[!] Schema validation failed for pattern {filename}: {e}")
 
     print(f"[+] Successfully saved {saved_count} evasion patterns for the Blue Team.")
 
 if __name__ == "__main__":
     fetch_and_save_evasions()
+

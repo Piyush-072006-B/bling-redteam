@@ -247,6 +247,8 @@ services:
     env_file: .env
     environment:
       - SERVICE_NAME=escape-analyzer
+    volumes:
+      - ./evidence:/app/evidence
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
@@ -276,8 +278,8 @@ services:
 
   robustness-orchestrator:
     build:
-      context: ./redteam/orchestrator
-      dockerfile: Dockerfile
+      context: ./redteam
+      dockerfile: orchestrator/Dockerfile
     container_name: bling_robustness_orchestrator
     networks: [redteam-net]
     depends_on:
@@ -302,6 +304,8 @@ services:
       - MUTATOR_URL=http://topology-mutator:8004
       - METRICS_URL=http://escape-analyzer:8005
       - DIVERSITY_URL=http://topology-diversity:8082
+    volumes:
+      - ./evidence:/app/evidence
     restart: unless-stopped
 
   sandbox-control-api:

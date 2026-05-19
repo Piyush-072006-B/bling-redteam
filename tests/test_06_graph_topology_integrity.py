@@ -6,6 +6,15 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import os
 import json
+import sys
+
+# Resolve sys.path for redteam import
+current_dir = os.path.dirname(os.path.abspath(__file__))
+workspace_root = os.path.dirname(current_dir)
+if workspace_root not in sys.path:
+    sys.path.insert(0, workspace_root)
+
+from redteam.canonical_exporter import export_pattern
 
 GENERATOR_URL = "http://localhost:8001"
 
@@ -23,21 +32,19 @@ def _build_graph(transactions):
 
 def _save_evidence(G, name, transactions):
     """Save graph snapshot and JSON export."""
-    os.makedirs(r"D:\bling-redteam\evidence\graph_snapshots", exist_ok=True)
-    os.makedirs(r"D:\bling-redteam\evidence\evasion_exports", exist_ok=True)
+    snapshots_dir = os.path.join(workspace_root, "evidence", "graph_snapshots")
+    os.makedirs(snapshots_dir, exist_ok=True)
     
     # Save image
     plt.figure(figsize=(8, 6))
     pos = nx.spring_layout(G, seed=42)
     nx.draw(G, pos, with_labels=True, node_color='lightblue', edge_color='gray', node_size=500, font_size=8)
-    img_path = rf"D:\bling-redteam\evidence\graph_snapshots\{name}.png"
+    img_path = os.path.join(snapshots_dir, f"{name}.png")
     plt.savefig(img_path)
     plt.close()
     
-    # Save JSON
-    json_path = rf"D:\bling-redteam\evidence\evasion_exports\{name}.json"
-    with open(json_path, 'w') as f:
-        json.dump(transactions, f, indent=2)
+    # Save JSON via canonical exporter layer
+    export_pattern(transactions, f"{name}.json")
 
 @pytest.mark.parametrize("attack_type", [
     "round_trip", "layering_chain", "mule_network", 

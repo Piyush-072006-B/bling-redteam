@@ -74,22 +74,35 @@ class EscapeAnalyzer:
                 session["evaded"] += 1
                 self._global["total_evasions"] += 1
 
-                # Retain the topology structure for export
+                # Retain the topology structure for export, grouping by simulation_id to reconstruct the graph
                 if topology_payload:
-                    self._evasion_topologies.append({
-                        "simulation_id": simulation_id,
-                        "topology_type": topology_type,
-                        "mutation_generation": mutation_generation,
-                        "topology_payload": topology_payload,
-                        "captured_at": datetime.utcnow().isoformat() + "Z",
-                        "export_status": "pending_investigator_review",
-                    })
+                    existing_record = None
+                    for rec in self._evasion_topologies:
+                        if rec["simulation_id"] == simulation_id:
+                            existing_record = rec
+                            break
+                    
+                    if existing_record:
+                        # Append the new transaction to the existing list of transactions for this topology
+                        if not isinstance(existing_record["topology_payload"], list):
+                            existing_record["topology_payload"] = [existing_record["topology_payload"]]
+                        existing_record["topology_payload"].append(topology_payload)
+                    else:
+                        # Initialize a new record with a list of transactions for this topology
+                        self._evasion_topologies.append({
+                            "simulation_id": simulation_id,
+                            "topology_type": topology_type,
+                            "mutation_generation": mutation_generation,
+                            "topology_payload": [topology_payload],
+                            "captured_at": datetime.utcnow().isoformat() + "Z",
+                            "export_status": "pending_investigator_review",
+                        })
             else:
                 session["detected"] += 1
                 self._global["total_heuristic_detections"] += 1
                 if evaluation_latency_ms > 0:
                     session["evaluation_latencies_ms"].append(evaluation_latency_ms)
-
+            
             session["last_updated"] = datetime.utcnow().isoformat() + "Z"
 
     def get_session_analysis(self, simulation_id: str) -> Optional[Dict[str, Any]]:

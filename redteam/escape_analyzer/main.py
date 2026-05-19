@@ -246,6 +246,42 @@ async def get_metrics_compat(simulation_id: str):
     result = _analyzer.get_session_analysis(simulation_id)
     if not result:
         raise HTTPException(status_code=404, detail="Session not found")
+    
+    # Check if this run has evasions that should be automatically exported to evasion_exports
+    detection_rate = result.get("detection_rate", 0.0)
+    if detection_rate < MUTATION_THRESHOLD:
+        # Find the evasion payload in the analyzer
+        with _analyzer._lock:
+            record = None
+            for rec in _analyzer._evasion_topologies:
+                if rec["simulation_id"] == simulation_id:
+                    record = rec
+                    break
+        
+        if record and record.get("topology_payload"):
+            # Export to evasion_exports directory immediately!
+            try:
+                from redteam.canonical_exporter import export_pattern
+            except ImportError:
+                from canonical_exporter import export_pattern
+
+            topo_type = record.get("topology_type", "unknown")
+            gen = record.get("mutation_generation", 0)
+            filename = f"evasion_{topo_type}_gen{gen}_{simulation_id}.json"
+            try:
+                export_pattern(record["topology_payload"], filename)
+                log.info(
+                    "Automatically exported evasion pattern to evasion_exports",
+                    filename=filename,
+                    evasion_count=len(record["topology_payload"])
+                )
+            except Exception as e:
+                log.warning(
+                    "Automatic evasion export failed schema validation",
+                    error=str(e),
+                    filename=filename
+                )
+                
     return result
 
 

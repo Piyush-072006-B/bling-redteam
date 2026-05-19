@@ -85,9 +85,21 @@ class FraudPatternGenerator:
             "velocity_attack": self.velocity_attack,
             "fan_in_fan_out": self.fan_in_fan_out,
         }
-        fn = generators.get(attack_type)
+        # Translate semantic family names from diversity engine to generator types
+        family_map = {
+            "hierarchical_layering_chain": "layering_chain",
+            "cyclic_laundering_ring": "round_trip",
+            "multi_hub_dispersal_network": "mule_network",
+            "fragmented_swarm_topology": "structuring",
+            "lattice_laundering_structure": "dormant_activation",
+            "distributed_laundering_mesh": "velocity_attack",
+            "multi_stage_funnel": "fan_in_fan_out",
+            "hybrid_mesh_cycle": "round_trip",
+        }
+        mapped_attack_type = family_map.get(attack_type, attack_type)
+        fn = generators.get(mapped_attack_type)
         if not fn:
-            logger.warning(f"Unknown attack type {attack_type}, defaulting to layering_chain")
+            logger.warning(f"Unknown attack type {attack_type} (mapped: {mapped_attack_type}), defaulting to layering_chain")
             fn = self.layering_chain
 
         txns = fn(simulation_id=simulation_id, depth=depth, mutation_generation=mutation_generation)
@@ -202,22 +214,35 @@ class FraudPatternGenerator:
         depth: int = 10,
         mutation_generation: int = 0,
     ) -> List[Dict[str, Any]]:
-        """Break large amount into sub-threshold chunks (smurfing)"""
+        """Break large amount into sub-threshold chunks (smurfing) with intermediary hops"""
         profile = _PROFILES["attack_profiles"]["structuring"]
-        threshold = profile["threshold"]
         source = self.pool.get_random()
         sinks = self.pool.sample_ids(random.randint(2, 5))
         txns = []
         ts = datetime.utcnow()
         count = random.randint(*profile["repeat_count_range"])
 
+        # Create intermediaries to enforce structural density and connectivity safeguards
+        intermediaries = [self.pool.get_random()["account_id"] for _ in range(len(sinks))]
+
         for i in range(count):
             amount = random.uniform(*profile["chunk_range"])  # always below threshold
-            sink_id = random.choice(sinks)
+            idx = i % len(sinks)
+            inter_id = intermediaries[idx]
+            sink_id = sinks[idx]
+            
             gap = random.randint(1800, profile["time_spread_seconds"] // count)
             ts += timedelta(seconds=gap)
+            
+            # source -> intermediary
             txns.append(
-                _make_txn(source["account_id"], sink_id, amount, "structuring",
+                _make_txn(source["account_id"], inter_id, amount, "structuring",
+                          simulation_id, mutation_generation, ts)
+            )
+            # intermediary -> sink
+            ts += timedelta(seconds=random.randint(60, 300))
+            txns.append(
+                _make_txn(inter_id, sink_id, amount * 0.98, "structuring",
                           simulation_id, mutation_generation, ts)
             )
         return txns
@@ -228,7 +253,7 @@ class FraudPatternGenerator:
         depth: int = 5,
         mutation_generation: int = 0,
     ) -> List[Dict[str, Any]]:
-        """Dormant account suddenly activates with burst of transactions"""
+        """Dormant account suddenly activates with burst of transactions through intermediaries"""
         profile = _PROFILES["attack_profiles"]["dormant_activation"]
         dormants = self.pool.get_dormant_accounts(1)
         if not dormants:
@@ -237,15 +262,27 @@ class FraudPatternGenerator:
 
         burst_count = random.randint(*profile["burst_transactions"])
         sinks = self.pool.sample_ids(burst_count)
+        
+        # Enforce structural connectivity: route through intermediaries
+        intermediaries = [self.pool.get_random()["account_id"] for _ in range(burst_count)]
         txns = []
         ts = datetime.utcnow()
 
-        for sink_id in sinks[:burst_count]:
+        for idx, sink_id in enumerate(sinks[:burst_count]):
             amount = random.uniform(*profile["amount_range"])
+            inter_id = intermediaries[idx]
             gap = random.randint(30, 900)
             ts += timedelta(seconds=gap)
+            
+            # dormant -> intermediary
             txns.append(
-                _make_txn(dormant["account_id"], sink_id, amount, "dormant_activation",
+                _make_txn(dormant["account_id"], inter_id, amount, "dormant_activation",
+                          simulation_id, mutation_generation, ts)
+            )
+            # intermediary -> sink
+            ts += timedelta(seconds=random.randint(60, 300))
+            txns.append(
+                _make_txn(inter_id, sink_id, amount * 0.98, "dormant_activation",
                           simulation_id, mutation_generation, ts)
             )
         return txns
@@ -256,7 +293,7 @@ class FraudPatternGenerator:
         depth: int = 20,
         mutation_generation: int = 0,
     ) -> List[Dict[str, Any]]:
-        """Rapid-fire transactions in short time window"""
+        """Rapid-fire transactions in short time window with intermediary hops"""
         profile = _PROFILES["attack_profiles"]["velocity_attack"]
         source = self.pool.get_random()
         count = random.randint(*profile["transaction_count_range"])
@@ -264,13 +301,25 @@ class FraudPatternGenerator:
         txns = []
         ts = datetime.utcnow()
 
-        for _ in range(count):
+        # Enforce structural connectivity: route through intermediaries
+        intermediaries = [self.pool.get_random()["account_id"] for _ in range(3)]
+
+        for i in range(count):
             amount = random.uniform(*profile["amount_range"])
-            sink = self.pool.get_random(exclude=[source["account_id"]])
+            inter_id = intermediaries[i % len(intermediaries)]
+            sink = self.pool.get_random(exclude=[source["account_id"], inter_id])
             gap = random.uniform(1, window / count)
             ts += timedelta(seconds=gap)
+            
+            # source -> intermediary
             txns.append(
-                _make_txn(source["account_id"], sink["account_id"], amount, "velocity_attack",
+                _make_txn(source["account_id"], inter_id, amount, "velocity_attack",
+                          simulation_id, mutation_generation, ts)
+            )
+            # intermediary -> sink
+            ts += timedelta(seconds=random.uniform(0.1, 2.0))
+            txns.append(
+                _make_txn(inter_id, sink["account_id"], amount * 0.99, "velocity_attack",
                           simulation_id, mutation_generation, ts)
             )
         return txns

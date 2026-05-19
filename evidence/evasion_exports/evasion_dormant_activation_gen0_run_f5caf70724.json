@@ -1,0 +1,30 @@
+[
+  {
+    "from_account": "ACC_DORMANT_772",
+    "to_account": "ACC_INTERMEDIARY_X",
+    "amount": 25000,
+    "payment_rail": "NEFT",
+    "timestamp": "2026-05-19T13:00:00"
+  },
+  {
+    "from_account": "ACC_DORMANT_772",
+    "to_account": "ACC_INTERMEDIARY_Y",
+    "amount": 25000,
+    "payment_rail": "NEFT",
+    "timestamp": "2026-05-19T13:05:00"
+  },
+  {
+    "from_account": "ACC_INTERMEDIARY_X",
+    "to_account": "ACC_SINK_99",
+    "amount": 24500,
+    "payment_rail": "RTGS",
+    "timestamp": "2026-05-19T13:30:00"
+  },
+  {
+    "from_account": "ACC_INTERMEDIARY_Y",
+    "to_account": "ACC_SINK_99",
+    "amount": 24500,
+    "payment_rail": "RTGS",
+    "timestamp": "2026-05-19T13:35:00"
+  }
+]

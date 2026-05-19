@@ -1,0 +1,44 @@
+[
+  {
+    "from_account": "acc_448a28524f",
+    "to_account": "acc_23f4fa8301",
+    "amount": 71370,
+    "payment_rail": "pos_transaction",
+    "timestamp": "2026-05-19T06:17:55"
+  },
+  {
+    "from_account": "acc_23f4fa8301",
+    "to_account": "acc_2ee77d8a1d",
+    "amount": 71516,
+    "payment_rail": "crypto_exchange",
+    "timestamp": "2026-05-19T06:30:30"
+  },
+  {
+    "from_account": "acc_2ee77d8a1d",
+    "to_account": "acc_535ddd2102",
+    "amount": 66814,
+    "payment_rail": "internal_transfer",
+    "timestamp": "2026-05-19T06:32:46"
+  },
+  {
+    "from_account": "acc_535ddd2102",
+    "to_account": "acc_0cbfd92b61",
+    "amount": 21123,
+    "payment_rail": "atm_withdrawal",
+    "timestamp": "2026-05-19T06:46:36"
+  },
+  {
+    "from_account": "acc_0cbfd92b61",
+    "to_account": "acc_77a69b767c",
+    "amount": 94217,
+    "payment_rail": "wire_transfer",
+    "timestamp": "2026-05-19T07:04:34"
+  },
+  {
+    "from_account": "acc_77a69b767c",
+    "to_account": "acc_448a28524f",
+    "amount": 21591,
+    "payment_rail": "bill_payment",
+    "timestamp": "2026-05-19T07:12:28"
+  }
+]

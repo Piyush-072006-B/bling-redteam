@@ -88,6 +88,17 @@ TOPOLOGY_TYPES = [
     "fan_in_fan_out",      # Aggregate then disperse
 ]
 
+FAMILY_TO_TOPOLOGY_MAP = {
+    "hierarchical_layering_chain": "layering_chain",
+    "cyclic_laundering_ring": "round_trip",
+    "multi_hub_dispersal_network": "mule_network",
+    "fragmented_swarm_topology": "structuring",
+    "lattice_laundering_structure": "dormant_activation",
+    "distributed_laundering_mesh": "velocity_attack",
+    "multi_stage_funnel": "fan_in_fan_out",
+    "hybrid_mesh_cycle": "round_trip",
+}
+
 
 async def wait_for_services(client: httpx.AsyncClient, max_wait: int = 180) -> None:
     """Wait until all pipeline services are healthy before starting the cycle."""
@@ -391,8 +402,14 @@ async def robustness_testing_cycle(client: httpx.AsyncClient) -> None:
             
             novelty_score = diversity_eval.get("novelty_score", 1.0)
             structural_divergence = diversity_eval.get("structural_divergence", 1.0)
-            suggested_next_family = diversity_eval.get("suggested_next_family", topology_type)
-            actual_family = diversity_eval.get("topology_family", topology_type)
+            
+            suggested_raw = diversity_eval.get("suggested_next_family", topology_type)
+            suggested_next_family = FAMILY_TO_TOPOLOGY_MAP.get(suggested_raw, suggested_raw)
+            if suggested_next_family not in TOPOLOGY_TYPES:
+                suggested_next_family = random.choice(TOPOLOGY_TYPES)
+                
+            actual_raw = diversity_eval.get("topology_family", topology_type)
+            actual_family = FAMILY_TO_TOPOLOGY_MAP.get(actual_raw, actual_raw)
 
             log.info(
                 "Structural Morphology Evaluated",
@@ -458,6 +475,28 @@ async def robustness_testing_cycle(client: httpx.AsyncClient) -> None:
                     f"Detection rate {detection_rate:.1%} < threshold. "
                     f"Pattern exported to Escape Analyzer."
                 )
+                
+                # Export the pattern directly to evasion_exports
+                try:
+                    from canonical_exporter import export_pattern
+                except ImportError:
+                    from redteam.canonical_exporter import export_pattern
+
+                filename = f"evasion_{topology_type}_gen{mutation_gen}_{run_id}.json"
+                try:
+                    export_pattern(transactions, filename)
+                    log.info(
+                        "Automatically saved evasion pattern to evasion_exports",
+                        filename=filename,
+                        transaction_count=len(transactions)
+                    )
+                except Exception as e:
+                    log.warning(
+                        "Orchestrator failed to save evasion pattern",
+                        error=str(e),
+                        filename=filename
+                    )
+
                 # Success means we explore a new branch
                 current_topology_type = suggested_next_family
                 parent_simulation_id = None
